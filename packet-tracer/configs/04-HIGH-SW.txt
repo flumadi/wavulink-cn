@@ -1,0 +1,26 @@
+! HIGH-SW  (Cisco 2960-24TT)  - client site behind a 5 GHz radio
+! Gi0/1 -> HUB-SW (radio link)   Fa0/1-Fa0/10 -> user devices (VLAN 20)
+enable
+configure terminal
+hostname HIGH-SW
+no ip domain-lookup
+vlan 20
+ name SCHOOL
+vlan 99
+ name MGMT
+!
+interface GigabitEthernet0/1
+ description RADIO-LINK-TO-HUB
+ switchport mode trunk
+ switchport trunk allowed vlan 20,99
+interface range FastEthernet0/1 - 10
+ switchport mode access
+ switchport access vlan 20
+ spanning-tree portfast
+!
+interface Vlan99
+ ip address 10.10.99.4 255.255.255.0
+ no shutdown
+ip default-gateway 10.10.99.1
+end
+write memory

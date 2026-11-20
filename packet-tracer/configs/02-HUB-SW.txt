@@ -1,0 +1,50 @@
+! HUB-SW  (Cisco 2960-24TT)  - switch in the hub, feeds the sector radios
+! Gi0/1 -> HUB-CORE G0/0   Fa0/1 HEALTH-PC   Fa0/2 CONTENT-SRV   Fa0/3 FILE-SRV
+! Fa0/21 -> PRIMARY-SW Gi0/1   Fa0/22 -> HIGH-SW Gi0/1   Fa0/23 -> MARKET-SW Gi0/1
+! (Fa0/21-23 stand in for the 5 GHz point-to-multipoint radio links)
+enable
+configure terminal
+hostname HUB-SW
+no ip domain-lookup
+vlan 10
+ name HEALTH
+vlan 20
+ name SCHOOLS
+vlan 30
+ name HOTSPOT
+vlan 40
+ name SERVERS
+vlan 99
+ name MGMT
+!
+interface GigabitEthernet0/1
+ description TO-HUB-CORE
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40,99
+interface range FastEthernet0/21 - 23
+ description RADIO-LINK-TO-SITE
+ switchport mode trunk
+ switchport trunk allowed vlan 20,30,99
+interface FastEthernet0/1
+ description HEALTH-PC
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+interface range FastEthernet0/2 - 3
+ description SERVERS
+ switchport mode access
+ switchport access vlan 40
+ spanning-tree portfast
+interface range FastEthernet0/4 - 20
+ shutdown
+interface FastEthernet0/24
+ shutdown
+interface GigabitEthernet0/2
+ shutdown
+!
+interface Vlan99
+ ip address 10.10.99.2 255.255.255.0
+ no shutdown
+ip default-gateway 10.10.99.1
+end
+write memory
