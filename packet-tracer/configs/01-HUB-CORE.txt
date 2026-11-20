@@ -1,0 +1,82 @@
+! HUB-CORE  (Cisco 2911)  - stands in for the MikroTik RB5009 core router at the hub
+! G0/0 -> HUB-SW Gi0/1 (trunk)   G0/1 -> STARLINK-GW G0/0   G0/2 -> LTE-GW G0/0
+enable
+configure terminal
+hostname HUB-CORE
+no ip domain-lookup
+service password-encryption
+enable secret lokori-admin
+banner motd # Lokori community network - authorised access only #
+!
+interface GigabitEthernet0/0
+ no shutdown
+interface GigabitEthernet0/0.10
+ description HEALTH
+ encapsulation dot1Q 10
+ ip address 10.10.10.1 255.255.255.0
+interface GigabitEthernet0/0.20
+ description SCHOOLS
+ encapsulation dot1Q 20
+ ip address 10.10.20.1 255.255.255.0
+interface GigabitEthernet0/0.30
+ description PUBLIC-HOTSPOT
+ encapsulation dot1Q 30
+ ip address 10.10.30.1 255.255.255.0
+ ip access-group HOTSPOT-IN in
+interface GigabitEthernet0/0.40
+ description SERVERS
+ encapsulation dot1Q 40
+ ip address 10.10.40.1 255.255.255.0
+interface GigabitEthernet0/0.99
+ description MANAGEMENT
+ encapsulation dot1Q 99
+ ip address 10.10.99.1 255.255.255.0
+!
+interface GigabitEthernet0/1
+ description UPLINK-STARLINK
+ ip address 100.64.0.2 255.255.255.252
+ no shutdown
+interface GigabitEthernet0/2
+ description BACKUP-4G
+ ip address 100.65.0.2 255.255.255.252
+ no shutdown
+!
+! Main route via Starlink; floating route (AD 10) via 4G takes over if G0/1 goes down
+ip route 0.0.0.0 0.0.0.0 100.64.0.1
+ip route 0.0.0.0 0.0.0.0 100.65.0.1 10
+!
+ip dhcp excluded-address 10.10.10.1 10.10.10.20
+ip dhcp excluded-address 10.10.20.1 10.10.20.20
+ip dhcp excluded-address 10.10.30.1 10.10.30.20
+ip dhcp pool HEALTH
+ network 10.10.10.0 255.255.255.0
+ default-router 10.10.10.1
+ dns-server 10.10.40.10
+ip dhcp pool SCHOOLS
+ network 10.10.20.0 255.255.255.0
+ default-router 10.10.20.1
+ dns-server 10.10.40.10
+ip dhcp pool HOTSPOT
+ network 10.10.30.0 255.255.255.0
+ default-router 10.10.30.1
+ dns-server 10.10.40.10
+!
+! Public hotspot users may browse the internet and the content server only
+ip access-list extended HOTSPOT-IN
+ permit udp any any eq bootps
+ deny ip 10.10.30.0 0.0.0.255 10.10.10.0 0.0.0.255
+ deny ip 10.10.30.0 0.0.0.255 10.10.20.0 0.0.0.255
+ deny ip 10.10.30.0 0.0.0.255 10.10.99.0 0.0.0.255
+ permit udp 10.10.30.0 0.0.0.255 host 10.10.40.10 eq domain
+ permit tcp 10.10.30.0 0.0.0.255 host 10.10.40.10 eq www
+ deny ip 10.10.30.0 0.0.0.255 10.10.40.0 0.0.0.255
+ permit ip 10.10.30.0 0.0.0.255 any
+!
+line console 0
+ password lokori-con
+ login
+line vty 0 4
+ password lokori-vty
+ login
+end
+write memory
